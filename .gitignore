@@ -4,6 +4,4 @@
 # Pasta muito grande, não faz sentido enviar para o repositório
 node_modules/
 
-#
-#
 .env
