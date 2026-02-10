@@ -17,13 +17,23 @@ router.get('/relatorio-completo', async (req, res) => {
             INNER JOIN cliente c ON p.idCliente = c.idCliente
             INNER JOIN itensPedido ip ON p.idPedido = ip.idPedido
             INNER JOIN alimento a ON ip.idAlimento = a.idAlimento
-            INNER JOIN restaurante r ON p.idRestaurante = r.idRestaurante`
-        );
+            INNER JOIN restaurante r ON p.idRestaurante = r.idRestaurante
+        `);
+    if (rows.length === 0) {
+        return res.status(404).json({ erro: 'Produto não encontrado' });
+    }
         res.json(rows);
     } catch (error) {
         console.error('Erro ao consultar clientes: ', error);
         res.status(500).json({erro: 'Erro ao consultar produto', detalhes: error.message});
     }
 });
+
+// --------------------------------------DELETE------------------------------------------------------
+
+
+
+// --------------------------------------shsrjr------------------------------------------------------
+
 
 module.exports = router;

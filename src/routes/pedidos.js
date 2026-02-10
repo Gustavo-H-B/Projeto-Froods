@@ -5,11 +5,21 @@ const router = express.Router();
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM pedidos');
-        res.json(rows);
+    if (rows.length === 0) {
+        return res.status(404).json({ erro: 'Produto não encontrado' });
+    }
+    res.json(rows);
     } catch (error) {
         console.error('Erro ao consultar clientes: ', error);
         res.status(500).json({erro: 'Erro ao consultar produto', detalhes: error.message});
     }
 });
+
+// --------------------------------------DELETE------------------------------------------------------
+
+
+
+// --------------------------------------shsrjr------------------------------------------------------
+
 
 module.exports = router;
