@@ -3,17 +3,17 @@ const { pool } = require('../config/db');
 const router = express.Router();
 
 // --------------------------------------GET------------------------------------------------------
-router.get('/:idAlimento', async (req, res) => {
-    const idAlimento = req.params.idAlimento;
+router.get('/:id', async (req, res) => {
+    const idAlimento = req.params.id;
     try {
         const[rows] = await pool.execute('SELECT * FROM alimento WHERE idAlimento = ?', [idAlimento]);
     if (rows.length === 0) {
-      return res.status(404).json({ erro: 'Produto não encontrado' });
+      return res.status(404).json({ erro: 'alimento não encontrado' });
     }
     res.json(rows);
   } catch (error) {
-    console.error('Erro ao consultar produto:', error);
-    res.status(500).json({ erro: 'Erro ao consultar produto', detalhes: error.message });
+    console.error('Erro ao consultar alimento:', error);
+    res.status(500).json({ erro: 'Erro ao consultar alimento', detalhes: error.message });
   }
 });
 
@@ -32,8 +32,8 @@ router.get('/', async (req, res) => {
         );
         res.json(rows);
     } catch (error) {
-        console.error('Erro ao consultar clientes: ', error);
-        res.status(500).json({erro: 'Erro ao consultar produto', detalhes: error.message});
+        console.error('Erro ao consultar o alimento: ', error);
+        res.status(500).json({erro: 'Erro ao consultar o alimento', detalhes: error.message});
     }
 });
 
@@ -42,28 +42,29 @@ router.delete('/:id/permanente', async (req, res) => {
   const alimentoId = req.params.id;
   
   try {
-    // Primeiro verifica se o produto existe
+    // Primeiro verifica se o alimento existe
     const [alimento] = await pool.execute('SELECT * FROM alimento WHERE idAlimento = ?', [alimentoId]);
     if (alimento.length === 0) {
       return res.status(404).json({ erro: 'Alimento não encontrado' });
     }
 
-    // Verifica se existem movimentações vinculadas
+    // Verifica se existem pedidos vinculadas
     const [movimentacoes] = await pool.execute('SELECT COUNT(*) as total FROM itensPedido WHERE idAlimento = ?', [alimentoId]);
     if (movimentacoes[0].total > 0) {
       return res.status(400).json({ 
-        erro: 'Não é possível excluir permanentemente o produto',
-        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este produto. Use a rota de desativação (soft delete) em vez da exclusão permanente.`
+        erro: 'Não é possível excluir permanentemente o alimento',
+        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este alimento. Use a rota de desativação (soft delete) em vez da exclusão permanente.`
       });
     }
 
-    // Se não há movimentações, procede com a exclusão permanente
+    // Se não há pedidos, procede com a exclusão permanente
     const [result] = await pool.execute('DELETE FROM alimento WHERE idAlimento = ?', [alimentoId]);
     
     if (result.affectedRows === 0) {
       return res.status(404).json({ erro: 'Alimento não encontrado' });
     }
 
+    //retorna uma mensagem depois do BAN!
     res.json({ 
       mensagem: 'Alimento excluído permanentemente com sucesso',
       alimento: alimento[0].nome,
@@ -78,7 +79,6 @@ router.delete('/:id/permanente', async (req, res) => {
 });
 
 // --------------------------------------POST------------------------------------------------------
-
 router.post('/adicionar', async (req, res) => {
   const { 
     nome, 
@@ -87,7 +87,7 @@ router.post('/adicionar', async (req, res) => {
     idRestaurante 
   } = req.body;
 
-  // Validação de dados obrigatórios
+  // Valida se possui o nome do alimento
   if (!nome || nome.trim() === '') {
     return res.status(400).json({ 
       erro: 'Nome do alimento é obrigatório',
@@ -95,6 +95,7 @@ router.post('/adicionar', async (req, res) => {
     });
   }
 
+  // Valida se possui nome a categoria
   if (!categoria || categoria.trim() === '') {
     return res.status(400).json({ 
       erro: 'Categoria do alimento é obrigatório',
@@ -102,7 +103,7 @@ router.post('/adicionar', async (req, res) => {
     });
   }
 
-  // Valida dados opcionais
+  // Valida o tamanho do nome
   const nomeAlimento = nome.trim();
   if (nomeAlimento.length > 200) {
     return res.status(400).json({ 
@@ -111,6 +112,7 @@ router.post('/adicionar', async (req, res) => {
     });
   }
 
+  // Valida o tamanho da categoria
   const categoriaAlimento = categoria.trim();
   if (categoriaAlimento.length > 50 ) {
     return res.status(400).json({ 
@@ -119,6 +121,7 @@ router.post('/adicionar', async (req, res) => {
     });
   }
 
+    // Valida o preço do alimento
   const precoAlimento = preco;
   if (isNaN(precoAlimento) || precoAlimento <= 0 || precoAlimento > 999999.99) {
     return res.status(400).json({ 
@@ -128,18 +131,18 @@ router.post('/adicionar', async (req, res) => {
   }
 
   try {
-    // Verifica se a restauranteProvedor existe (se foi fornecida)
-    if (restauranteProvedor) {
-      const [restauranteProvedor] = await pool.execute('SELECT * FROM restaurante WHERE idRestaurante = ?', [restauranteProvedor]);
+    // Verifica se o restaurante existe
+    if (idRestaurante) {
+      const [restauranteProvedor] = await pool.execute('SELECT * FROM restaurante WHERE idRestaurante = ?', [idRestaurante]);
       if (restauranteProvedor.length === 0) {
         return res.status(404).json({ 
           error: 'Restaurante não encontrado',
-          messagem: `Não existe o restaurante com o ID ${restauranteProvedor}`
+          messagem: `Não existe o restaurante com o ID ${idRestaurante}`
         });
       }
     }
 
-    // Verifica se já existe um produto com este nome
+    // Verifica se já existe um alimento com este nome
     const [alimentoExistente] = await pool.execute('SELECT * FROM alimento WHERE nome = ?', [nomeAlimento]);
     if (alimentoExistente.length > 0) {
       return res.status(409).json({ 
@@ -148,10 +151,10 @@ router.post('/adicionar', async (req, res) => {
       });
     }
 
-    // Insere o novo produto
+    // Insere o novo alimento
     const query = `
-      INSERT INTO produtos 
-      (nome, preco, categoria, idRestaurante,) 
+      INSERT INTO alimento
+      (nome, preco, categoria, idRestaurante) 
       VALUES (?, ?, ?, ?)
     `;
     
@@ -159,10 +162,10 @@ router.post('/adicionar', async (req, res) => {
       nomeAlimento,
       preco,
       categoria,
-      idRestaurante,
+      idRestaurante
     ]);
     
-    // Busca o produto inserido com informações da restauranteProvedor para retornar os dados completos
+    // Busca o alimento inserido com informações do restaurante para retornar os dados completos
     const queryAlimento = `
       SELECT 
       a.*, 
@@ -174,13 +177,149 @@ router.post('/adicionar', async (req, res) => {
     const [novoAlimento] = await pool.execute(queryAlimento, [result.insertId]);
 
     res.status(201).json({
-      message: 'Alimento criado com sucesso',
-      produto: novoAlimento[0]
+      messagem: 'Alimento criado com sucesso',
+      alimento: novoAlimento[0]
     });
 
   } catch (error) {
     console.error('Erro ao criar alimento:', error);
     res.status(500).json({ erro: 'Erro ao criar o alimento', detalhes: error.message });
+  }
+});
+
+// --------------------------------------PUT------------------------------------------------------
+
+router.put('/:id/atualizar', async (req, res) => {
+  const alimentoId = req.params.id;
+  const {
+    nome, 
+    preco, 
+    categoria, 
+    idRestaurante
+  } = req.body;
+
+  // Valida se possui o nome do alimento
+  if (!nome || nome.trim() === '') {
+    return res.status(400).json({ 
+      erro: 'Nome do alimento é obrigatório',
+      messagem: 'Forneça um nome válido para o alimento'
+    });
+  }
+
+  // Valida se possui nome a categoria
+  if (!categoria || categoria.trim() === '') {
+    return res.status(400).json({ 
+      erro: 'Categoria do alimento é obrigatório',
+      messagem: 'Forneça uma categoria válida para o alimento'
+    });
+  }
+
+  // Valida o tamanho do nome
+  const nomeAlimento = nome.trim();
+  if (nomeAlimento.length > 200) {
+    return res.status(400).json({ 
+      erro: 'Nome muito longo',
+      messagem: 'O nome do alimento deve ter no máximo 200 caracteres'
+    });
+  }
+
+  // Valida o tamanho da categoria
+  const categoriaAlimento = categoria.trim();
+  if (categoriaAlimento.length > 50 ) {
+    return res.status(400).json({ 
+      erro: 'Categoria muito longo',
+      messagem: 'A categoria do alimento deve ter no máximo 50 caracteres'
+    });
+  }
+
+  // Valida o preço do alimento
+  const precoAlimento = preco;
+  if (isNaN(precoAlimento) || precoAlimento <= 0 || precoAlimento > 999999.99) {
+    return res.status(400).json({ 
+      erro: 'O preço deve ser no máximo 999999,99',
+      messagem: 'A categoria do alimento deve ter no máximo 50 caracteres'
+    });
+  }
+
+  try {
+    // Verifica se o restaurante existe
+    if (idRestaurante) {
+      const [restauranteProvedor] = await pool.execute('SELECT * FROM restaurante WHERE idRestaurante = ?', [idRestaurante]);
+      if (restauranteProvedor.length === 0) {
+        return res.status(404).json({ 
+          erro: 'Restaurante não encontrado',
+          messagem: `Não existe o restaurante com o ID ${idRestaurante}`
+        });
+      }
+    }
+
+    // Verifica se o alimento existe
+    const [existeAlimento] = await pool.execute('SELECT * FROM alimento WHERE idAlimento = ?', [alimentoId]);
+    if (existeAlimento.length === 0) {
+      return res.status(404).json({ erro: 'Alimento não encontrado' });
+    }
+    
+    // Constrói a quary de atualização dinamicamente baseado nos campos fornecidos
+    const camposParaAtualizar = [];
+    const valoresParaAtualizar = [];
+
+    if (nome !== undefined) {
+      camposParaAtualizar.push('nome = ?');
+      valoresParaAtualizar.push(nome.trim());
+    }
+    if (preco !== undefined) {
+      camposParaAtualizar.push('preco = ?');
+      valoresParaAtualizar.push(preco);
+    }
+    if (categoria !== undefined) {
+      camposParaAtualizar.push('categoria = ?');
+      valoresParaAtualizar.push(categoria);
+    }
+    if (idRestaurante !== undefined) {
+      camposParaAtualizar.push('idRestaurante = ?');
+      valoresParaAtualizar.push(idRestaurante);
+    }
+    
+    // Caso nenhum campo foi fornecido para atualização rejeitar
+    if (camposParaAtualizar.length === 0) {
+      return res.status(400).json({ 
+        erro: 'Nenhum campo para atualizar',
+        messagem: 'Forneça pelo menos um campo para ser atualizado'
+      });
+    }
+
+    // Adiciona o ID do alimento no final dos valores
+    valoresParaAtualizar.push(alimentoId);
+
+    // Executa a atualização
+    const queryUpdate = `UPDATE alimento SET ${camposParaAtualizar.join(', ')} WHERE idAlimento = ?`;
+    const [result] = await pool.execute(queryUpdate, valoresParaAtualizar);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Alimento não encontrado' });
+    }
+
+    // Busca o alimento atualizado com informações da categoria
+    const queryAlimento = `
+      SELECT a.*, 
+      r.nome AS nomeRestaurante
+      FROM alimento a
+      LEFT JOIN restaurante r ON a.idRestaurante = r.idRestaurante
+      WHERE a.idAlimento = ?
+    `;
+
+    const [alimentoAtualizado] = await pool.execute(queryAlimento, [alimentoId]);
+
+    // Menssagem de vitoria eu consegui!!!!!!
+    res.json({
+      messagem: 'Alimento atualizado com sucesso',
+      alimento: alimentoAtualizado[0],
+      camposAtualizados: camposParaAtualizar.length
+    });
+
+  } catch (error) {
+    console.error('Erro ao atualizar alimento:', error);
+    res.status(500).json({ erro: 'Erro ao atualizar alimento', detalhes: error.message });
   }
 });
 

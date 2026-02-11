@@ -2,6 +2,7 @@ const express = require('express');
 const { pool } = require('../config/db');
 const router = express.Router();
 
+// --------------------------------------GET---------------------------------------------------------
 router.get('/relatorio-completo', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
@@ -30,10 +31,12 @@ router.get('/relatorio-completo', async (req, res) => {
 });
 
 // --------------------------------------DELETE------------------------------------------------------
+// Não a necessidade...
 
+// --------------------------------------POST--------------------------------------------------------
+// Não a necessidade...
 
-
-// --------------------------------------shsrjr------------------------------------------------------
-
+// --------------------------------------PUT---------------------------------------------------------
+// Não a necessidade...
 
 module.exports = router;

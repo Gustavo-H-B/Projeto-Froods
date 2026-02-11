@@ -1,18 +1,34 @@
 const express = require('express');
+const { cpf } = require('cpf-cnpj-validator');
 const { pool } = require('../config/db');
 const router = express.Router();
 
+// --------------------------------------GET---------------------------------------------------------
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute('SELECT * FROM cliente');
     if (rows.length === 0) {
-        return res.status(404).json({ erro: 'Produto não encontrado' });
+        return res.status(404).json({ erro: 'Cliente não encontrado' });
     }
         res.json(rows);
     } catch (error) {
         console.error('Erro ao consultar clientes: ', error);
-        res.status(500).json({erro: 'Erro ao consultar produto', detalhes: error.message});
+        res.status(500).json({erro: 'Erro ao consultar o cliente', detalhes: error.message});
     }
+});
+
+router.get('/:id', async (req, res) => {
+    const idCliente = req.params.id;
+    try {
+        const[rows] = await pool.execute('SELECT * FROM cliente WHERE idCliente = ?', [idCliente]);
+    if (rows.length === 0) {
+      return res.status(404).json({ erro: 'Cliente não encontrado' });
+    }
+    res.json(rows);
+  } catch (error) {
+    console.error('Erro ao consultar o cliente:', error);
+    res.status(500).json({ erro: 'Erro ao consultar o cliente', detalhes: error.message });
+  }
 });
 
 // --------------------------------------DELETE------------------------------------------------------
@@ -55,7 +71,44 @@ router.delete('/:id/permanente', async (req, res) => {
   }
 });
 
-// --------------------------------------shsrjr------------------------------------------------------
+// --------------------------------------POST------------------------------------------------------
 
+router.post('/adicionar', async (req, res) => {
+    const { nome, enderecoCliente, telefone, cpfValue } = req.body || {};
+
+
+    if (!nome || nome.trim() === '') {
+        return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
+    }
+
+    if (!cpf.isValid(cpfValue)) {
+        return res.status(400).json({
+            error: 'cpf inválido',
+            message: 'Por favor digite um cpf válido'
+        });
+    }
+
+    try {
+        const [clienteExiste] = await pool.execute('SELECT * FROM cliente WHERE cpf = ?', [cpfValue]);
+        if (clienteExiste.length > 0) {
+            return res.status(409).json({ error: 'Cliente já existe com este CPF' });
+        }
+
+        const query = `
+        INSERT INTO cliente (
+        nome, 
+        enderecoCliente, 
+        telefone, 
+        cpf
+        ) 
+        VALUES (?, ?, ?, ?)`;
+        const [result] = await pool.execute(query, [nome.trim(), enderecoCliente, telefone, cpfValue]);
+
+
+        res.status(201).json({ message: 'Cliente criado com sucesso', id: result.insertId });
+    } catch (error) {
+        res.status(500).json({ erro: 'Erro ao criar cliente', detalhes: error.message });
+    }
+});
 
 module.exports = router;
