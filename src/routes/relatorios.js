@@ -3,7 +3,7 @@ const { pool } = require('../config/db');
 const router = express.Router();
 
 // --------------------------------------GET---------------------------------------------------------
-router.get('/relatorio-completo', async (req, res) => {
+router.get('/completo', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
             SELECT

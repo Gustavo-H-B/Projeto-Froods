@@ -53,7 +53,7 @@ router.delete('/:id/permanente', async (req, res) => {
     if (movimentacoes[0].total > 0) {
       return res.status(400).json({ 
         erro: 'Não é possível excluir permanentemente o alimento',
-        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este alimento. Use a rota de desativação (soft delete) em vez da exclusão permanente.`
+        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este alimento.`
       });
     }
 
@@ -188,7 +188,6 @@ router.post('/adicionar', async (req, res) => {
 });
 
 // --------------------------------------PUT------------------------------------------------------
-
 router.put('/:id/atualizar', async (req, res) => {
   const alimentoId = req.params.id;
   const {
@@ -198,38 +197,24 @@ router.put('/:id/atualizar', async (req, res) => {
     idRestaurante
   } = req.body;
 
-  // Valida se possui o nome do alimento
-  if (!nome || nome.trim() === '') {
-    return res.status(400).json({ 
-      erro: 'Nome do alimento é obrigatório',
-      messagem: 'Forneça um nome válido para o alimento'
-    });
+  // Verifica se tem algo e o tamanho do nome
+  if (nome !== undefined) {
+    if (nome.trim() === '') {
+      return res.status(400).json({ erro: 'O nome não pode ser vazio' });
+    }
+    if (nome.trim().length > 200) {
+      return res.status(400).json({ erro: 'Nome muito longo (máx 200)' });
+    }
   }
 
-  // Valida se possui nome a categoria
-  if (!categoria || categoria.trim() === '') {
-    return res.status(400).json({ 
-      erro: 'Categoria do alimento é obrigatório',
-      messagem: 'Forneça uma categoria válida para o alimento'
-    });
-  }
-
-  // Valida o tamanho do nome
-  const nomeAlimento = nome.trim();
-  if (nomeAlimento.length > 200) {
-    return res.status(400).json({ 
-      erro: 'Nome muito longo',
-      messagem: 'O nome do alimento deve ter no máximo 200 caracteres'
-    });
-  }
-
-  // Valida o tamanho da categoria
-  const categoriaAlimento = categoria.trim();
-  if (categoriaAlimento.length > 50 ) {
-    return res.status(400).json({ 
-      erro: 'Categoria muito longo',
-      messagem: 'A categoria do alimento deve ter no máximo 50 caracteres'
-    });
+  // Verifica se tem algo e o tamanho da categoria
+  if (categoria !== undefined) {
+    if (categoria.trim() === '') {
+      return res.status(400).json({ erro: 'A categoria não pode ser vazia' });
+    }
+    if (categoria.trim().length > 50) {
+      return res.status(400).json({ erro: 'Categoria muito longa (máx 50)' });
+    }
   }
 
   // Valida o preço do alimento
@@ -296,7 +281,7 @@ router.put('/:id/atualizar', async (req, res) => {
     const [result] = await pool.execute(queryUpdate, valoresParaAtualizar);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Alimento não encontrado' });
+      return res.status(404).json({ erro: 'Alimento não encontrado' });
     }
 
     // Busca o alimento atualizado com informações da categoria
