@@ -36,7 +36,7 @@ router.delete('/:id/permanente', async (req, res) => {
   const clienteId = req.params.id;
   
   try {
-    // Primeiro verifica se o produto existe
+    // Primeiro verifica se o cliente existe
     const [cliente] = await pool.execute('SELECT * FROM cliente WHERE idCliente = ?', [clienteId]);
     if (cliente.length === 0) {
       return res.status(404).json({ erro: 'Cliente não encontrado' });
@@ -75,8 +75,38 @@ router.delete('/:id/permanente', async (req, res) => {
 router.post('/adicionar', async (req, res) => {
     const { nome, enderecoCliente, telefone, cpf: cpfEnviado } = req.body || {};
 
-    if (!nome || nome.trim() === '') {
-        return res.status(400).json({ erro: 'Nome do cliente é obrigatório' });
+    // Verifica se está vazio o nome e o tamanho
+    if (nome !== undefined) {
+      if (nome.trim() === '') {
+        return res.status(400).json({ erro: 'O nome não pode ser vazio' });
+      }
+      if (nome.trim().length > 200) {
+        return res.status(400).json({ erro: 'Nome muito longo (máx 200)' });
+      }
+    }
+
+    // Verifica se tem telefone e o tamanho
+    if (telefone !== undefined) {
+      const tell = telefone.trim();
+      if (tell === '') {
+          return res.status(400).json({ erro: 'O telefone não pode ser vazio' });
+      }
+      if (tell.length < 8 || tell.length > 20) {
+          return res.status(400).json({ 
+              erro: 'Telefone inválido', 
+              mensagem: 'O telefone deve ter entre 8 e 20 caracteres' 
+          });
+      }
+    }
+
+    // Verifica se tem algo e o tamanho da endereço
+    if (enderecoCliente !== undefined) {
+      if (enderecoCliente.trim() === '') {
+        return res.status(400).json({ erro: 'O endereço não pode ser vazio' });
+      }
+      if (enderecoCliente.trim().length > 300) {
+        return res.status(400).json({ erro: 'Endereço muito longa (máx 300)' });
+      }
     }
 
     if (!cpf.isValid(cpfEnviado)) {
@@ -131,14 +161,14 @@ router.put('/:id/atualizar', async (req, res) => {
   // Verifica se tem algo e o tamanho da endereço
   if (enderecoCliente !== undefined) {
     if (enderecoCliente.trim() === '') {
-      return res.status(400).json({ erro: 'o endereço não pode ser vazio' });
+      return res.status(400).json({ erro: 'O endereço não pode ser vazio' });
     }
     if (enderecoCliente.trim().length > 300) {
       return res.status(400).json({ erro: 'Endereço muito longa (máx 300)' });
     }
   }
 
-  // Verifica o tamanho do telefone
+  // Verifica se tem telefone e o tamanho
   if (telefone !== undefined) {
     const tell = telefone.trim();
     if (tell === '') {
@@ -150,7 +180,7 @@ router.put('/:id/atualizar', async (req, res) => {
             mensagem: 'O telefone deve ter entre 8 e 20 caracteres' 
         });
     }
-}
+  }
 
   try {
     // Verifica se o cliente existe
@@ -181,7 +211,7 @@ router.put('/:id/atualizar', async (req, res) => {
       valoresParaAtualizar.push(telefone);
     }
     
-    // Caso nenhum campo foi fornecido para atualização rejeitar
+    // Caso nenhum campo foi fornecido para atualização: rejeitar
     if (camposParaAtualizar.length === 0) {
       return res.status(400).json({ 
         erro: 'Nenhum campo para atualizar',
@@ -222,8 +252,8 @@ router.put('/:id/atualizar', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erro ao atualizar alimento:', error);
-    res.status(500).json({ erro: 'Erro ao atualizar alimento', detalhes: error.message });
+    console.error('Erro ao atualizar o cliente:', error);
+    res.status(500).json({ erro: 'Erro ao atualizar o cliente', detalhes: error.message });
   }
 });
 

@@ -21,12 +21,12 @@ router.get('/completo', async (req, res) => {
             INNER JOIN restaurante r ON p.idRestaurante = r.idRestaurante
         `);
     if (rows.length === 0) {
-        return res.status(404).json({ erro: 'Produto não encontrado' });
+        return res.status(404).json({ erro: 'Relatorio não encontrado' });
     }
         res.json(rows);
     } catch (error) {
-        console.error('Erro ao consultar clientes: ', error);
-        res.status(500).json({erro: 'Erro ao consultar produto', detalhes: error.message});
+        console.error('Erro ao consultar relatorio: ', error);
+        res.status(500).json({erro: 'Erro ao consultar relatorio', detalhes: error.message});
     }
 });
 
