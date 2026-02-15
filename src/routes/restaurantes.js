@@ -32,36 +32,37 @@ router.get('/:id', async (req, res) => {
 });
 
 // --------------------------------------DELETE------------------------------------------------------
-router.delete('/:id/permanente', async (req, res) => {
+router.delete('/:id/deletar', async (req, res) => {
   const restauranteId = req.params.id;
   
+  // Primeiro verifica se o restaurante existe
   try {
-    // Primeiro verifica se o restaurante existe
-    const [cliente] = await pool.execute('SELECT * FROM restaurante WHERE idRestaurante = ?', [restauranteId]);
-    if (cliente.length === 0) {
+    const [restaurante] = await pool.execute('SELECT * FROM restaurante WHERE idRestaurante = ?', [restauranteId]);
+    if (restaurante.length === 0) {
       return res.status(404).json({ erro: 'Restaurante não encontrado' });
     }
 
-    // Verifica se existem movimentações vinculadas
-    const [movimentacoes] = await pool.execute('SELECT COUNT(*) as total FROM itensPedido WHERE idRestaurante = ?', [restauranteId]);
+    // Checa se existem registros na tabela pedidos vinculados ao restaurante
+    const [movimentacoes] = await pool.execute('SELECT COUNT(*) as total FROM pedidos WHERE idRestaurante = ?', [restauranteId]);
+    
     if (movimentacoes[0].total > 0) {
       return res.status(400).json({ 
         erro: 'Não é possível excluir permanentemente o Restaurante',
-        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este restaurante.`
+        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este restaurante no sistema. Para segurança dos dados, a exclusão foi bloqueada.`
       });
     }
 
-    // Se não há movimentações, procede com a exclusão permanente
+    // Se não há pedidos vinculados, procede com a exclusão permanente
     const [result] = await pool.execute('DELETE FROM restaurante WHERE idRestaurante = ?', [restauranteId]);
     
     if (result.affectedRows === 0) {
       return res.status(404).json({ erro: 'Restaurante não encontrado' });
     }
 
-    // Menssagem de sucesso!!!
+    // Mensagem de sucesso com o aviso de irreversibilidade
     res.json({ 
       mensagem: 'Restaurante excluído permanentemente com sucesso',
-      cliente: cliente[0].nome,
+      restaurante: restaurante[0].nome,
       id: restauranteId,
       AVISO: 'Esta ação é irreversível'
     });

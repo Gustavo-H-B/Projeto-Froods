@@ -31,27 +31,36 @@ router.get('/:id', async (req, res) => {
 });
 
 // --------------------------------------DELETE------------------------------------------------------
-router.delete('/:id/permanente', async (req, res) => {
-    const clientesId = req.params.id;
+router.delete('/:id/deletar', async (req, res) => {
+  const pedidoId = req.params.id;
 
+  // Primeiro verifica se o pedido existe e busca os dados dele
+  try {
+    const [pedido] = await pool.execute(`SELECT p.idPedido, c.nome as nomeCliente FROM pedidos p JOIN cliente c ON p.idCliente = c.idCliente WHERE p.idPedido = ?`, [pedidoId]);
 
-    try {
-        const [clientes] = await pool.execute('SELECT * FROM pedidos WHERE idPedido = ?', [clientesId]);
-        if (clientes.length === 0) {
-            return res.status(404).json({ erro: 'Pedido não encontrado' });
-        }
-
-
-        const [pedidos] = await pool.execute('SELECT COUNT(*) as total FROM pedidos WHERE idPedido = ?', [clientesId]);
-
-
-        await pool.execute('DELETE FROM pedidos WHERE idPedido = ?', [clientesId]);
-        res.json({ mensagem: 'Pedido removido do sistema com sucesso' });
-
-
-    } catch (error) {
-        res.status(500).json({ erro: 'Erro ao excluir', detalhes: error.message });
+    if (pedido.length === 0) {
+      return res.status(404).json({ erro: 'Pedido não encontrado' });
     }
+
+    // Continua com a exclusão
+    const [result] = await pool.execute('DELETE FROM pedidos WHERE idPedido = ?', [pedidoId]);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ erro: 'Pedido não encontrado' });
+    }
+
+    // Mensagem de sucesso completa
+    res.json({ 
+      mensagem: 'Pedido removido do sistema com sucesso',
+      id: pedidoId,
+      cliente: pedido[0].nomeCliente,
+      AVISO: 'Esta ação é irreversível'
+    });
+
+  } catch (error) {
+    console.error('Erro ao excluir pedido:', error);
+    res.status(500).json({ erro: 'Erro ao excluir o pedido', detalhes: error.message });
+  }
 });
 
 // --------------------------------------POST--------------------------------------------------------

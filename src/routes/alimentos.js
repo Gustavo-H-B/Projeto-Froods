@@ -21,14 +21,14 @@ router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
           SELECT
+          a.idAlimento,
           a.nome AS nomeAlimento, 
           a.preco, 
           a.categoria,
           r.idRestaurante, 
           r.nome AS nomeRestaurante
           FROM alimento a
-          INNER JOIN restaurante r ON a.idRestaurante = r.idRestaurante
-          ORDER BY a.categoria ASC, a.nome ASC`
+          INNER JOIN restaurante r ON a.idRestaurante = r.idRestaurante`
         );
         res.json(rows);
     } catch (error) {
@@ -38,22 +38,23 @@ router.get('/', async (req, res) => {
 });
 
 // --------------------------------------DELETE------------------------------------------------------
-router.delete('/:id/permanente', async (req, res) => {
+router.delete('/:id/deletar', async (req, res) => {
   const alimentoId = req.params.id;
-  
+
+  // Primeiro verifica se o alimento existe
   try {
-    // Primeiro verifica se o alimento existe
     const [alimento] = await pool.execute('SELECT * FROM alimento WHERE idAlimento = ?', [alimentoId]);
     if (alimento.length === 0) {
       return res.status(404).json({ erro: 'Alimento não encontrado' });
     }
 
-    // Verifica se existem pedidos vinculadas
-    const [movimentacoes] = await pool.execute('SELECT COUNT(*) as total FROM itensPedido WHERE idAlimento = ?', [alimentoId]);
+    //  Checa se existem pedidos vinculados a este alimento
+    const [movimentacoes] = await pool.execute('SELECT COUNT(*) as total FROM pedidos WHERE idAlimento = ?', [alimentoId]);
+    
     if (movimentacoes[0].total > 0) {
       return res.status(400).json({ 
         erro: 'Não é possível excluir permanentemente o alimento',
-        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este alimento.`
+        message: `Existem ${movimentacoes[0].total} pedidos vinculados a este alimento no sistema. Para não quebrar o histórico de vendas, a exclusão foi bloqueada.`
       });
     }
 
@@ -64,7 +65,7 @@ router.delete('/:id/permanente', async (req, res) => {
       return res.status(404).json({ erro: 'Alimento não encontrado' });
     }
 
-    //retorna uma mensagem depois do BAN!
+    // Retorna uma mensagem depois do BAN!
     res.json({ 
       mensagem: 'Alimento excluído permanentemente com sucesso',
       alimento: alimento[0].nome,
